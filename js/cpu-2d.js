@@ -1,54 +1,5 @@
 (function() {
 
-  function createShader(gl, source, type) {
-    const shader = gl.createShader(type);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        throw new Error(gl.getShaderInfoLog(shader) + source);
-    }
-    return shader;
-  }
-
-  function createProgram(gl, vertexShader, fragmentShader) {
-    const program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        throw new Error(gl.getProgramInfoLog(program));
-    }
-    return program;
-  }
-
-  function createTransformFeedbackProgram(gl, vertexShader, fragmentShader, varyings) {
-    const program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.transformFeedbackVaryings(program, varyings, gl.SEPARATE_ATTRIBS);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      throw new Error(gl.getProgramInfoLog(program));
-  }
-  return program;
-  }
-
-  function createVbo(gl, array, usage) {
-    const vbo = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, array, usage !== undefined ? usage : gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    return vbo;
-  }
-
-  function getUniformLocations(gl, program, keys) {
-    const locations = {};
-    keys.forEach(key => {
-        locations[key] = gl.getUniformLocation(program, key);
-    });
-    return locations;
-  }
-
   const UPDATE_PARTICLE_VERTEX_SHADER_SOURCE = 
 `#version 300 es
 
