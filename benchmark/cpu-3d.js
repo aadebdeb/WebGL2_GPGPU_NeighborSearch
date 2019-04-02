@@ -288,6 +288,8 @@ void main(void) {
 
   const gl = canvas.getContext('webgl2');
   gl.getExtension('EXT_color_buffer_float');
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.CULL_FACE);
 
   const updateParticleProgram = createUpdateParticleProgram(gl);
   const renderParticleProgram = createRenderParticleProgram(gl);
