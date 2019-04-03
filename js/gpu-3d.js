@@ -181,7 +181,7 @@ void main(void) {
   ivec3 bucketPosition100 = bucketPosition000 + ivec3(xOffset, 0, 0);
   ivec3 bucketPosition010 = bucketPosition000 + ivec3(0, yOffset, 0);
   ivec3 bucketPosition110 = bucketPosition000 + ivec3(xOffset, yOffset, 0);
-  ivec3 bucketPosition001 = bucketPosition000 + ivec3(0, 0, yOffset);
+  ivec3 bucketPosition001 = bucketPosition000 + ivec3(0, 0, zOffset);
   ivec3 bucketPosition101 = bucketPosition000 + ivec3(xOffset, 0, zOffset);
   ivec3 bucketPosition011 = bucketPosition000 + ivec3(0, yOffset, zOffset);
   ivec3 bucketPosition111 = bucketPosition000 + ivec3(xOffset, yOffset, zOffset);
