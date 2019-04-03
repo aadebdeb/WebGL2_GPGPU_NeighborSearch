@@ -182,7 +182,7 @@ void main(void) {
     sphere: {
       'radius': 5.0,
       'theta segment': 8,
-      'phi segment': 15
+      'phi segment': 16
     },
     camera: {
       'angle': -25.0,
