@@ -88,25 +88,19 @@ void main(void) {
   o_velocity = nextVelocity;
 }
 `
-
-  const RENDER_PARTICLE_VERTEX_SHADER_SOURCE =
+  const FIND_NEIGHGBORS_VERTEX_SHADER_SOURCE =
 `#version 300 es
 
 precision highp isampler2D;
 precision highp usampler2D;
 
-layout (location = 0) in vec3 vertexPosition;
-layout (location = 1) in vec3 vertexNormal;
-
-out vec3 v_color;
-out vec3 v_normal;
+out vec3 o_color;
 
 uniform sampler2D u_positionTexture;
 uniform usampler2D u_bucketTexture;
 uniform isampler2D u_bucketReferrerTexture;
 uniform float u_viewRadius;
 uniform float u_maxValue;
-uniform mat4 u_mvpMatrix;
 
 float simulationSpace = 1.0;
 
@@ -134,7 +128,7 @@ float findNeighbors(vec3 position, ivec3 bucketPosition, ivec3 bucketNum, int pa
     uvec2 bucket = texelFetch(u_bucketTexture, convertIndexToCoord(i, particleTextureSizeX), 0).xy;
 
     int particleIndex = int(bucket.y);
-    if (gl_InstanceID == particleIndex) {
+    if (gl_VertexID == particleIndex) {
       continue;
     }
     ivec2 particleCoord = convertIndexToCoord(particleIndex, particleTextureSizeX);
@@ -163,11 +157,8 @@ vec3 getHeatmapColor(float value, float maxValue) {
 }
 
 void main(void) {
-  ivec2 coord = convertIndexToCoord(gl_InstanceID, textureSize(u_positionTexture, 0).x);
+  ivec2 coord = convertIndexToCoord(gl_VertexID, textureSize(u_positionTexture, 0).x);
   vec3 position = texelFetch(u_positionTexture, coord, 0).xyz;
-
-  v_normal = (u_mvpMatrix * vec4(vertexNormal, 0.0)).xyz;
-  gl_Position = u_mvpMatrix * vec4(vertexPosition + (2.0 * position - 1.0) * 500.0, 1.0);
 
   int particleTextureSizeX = textureSize(u_positionTexture, 0).x;
   int bucketReferrerTextureSizeX = textureSize(u_bucketReferrerTexture, 0).x;
@@ -199,7 +190,50 @@ void main(void) {
   sum += findNeighbors(position, bucketPosition111, bucketNum, particleTextureSizeX, bucketReferrerTextureSizeX);
 
 
-  v_color = getHeatmapColor(sum, u_maxValue);
+  o_color = getHeatmapColor(sum, u_maxValue);
+}
+`
+
+  const TRANSFORM_FEEDBAK_FRAGMENT_SHADER_SOURCE =
+`#version 300 es
+
+precision highp float;
+
+out vec4 o_color;
+
+void main(void) {
+  o_color = vec4(1.0);
+}
+`
+
+  const RENDER_PARTICLE_VERTEX_SHADER_SOURCE =
+`#version 300 es
+
+precision highp isampler2D;
+precision highp usampler2D;
+
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 vertexNormal;
+layout (location = 2) in vec3 color;
+
+out vec3 v_color;
+out vec3 v_normal;
+
+uniform sampler2D u_positionTexture;
+uniform mat4 u_mvpMatrix;
+
+ivec2 convertIndexToCoord(int index, int sizeX) {
+  return ivec2(index % sizeX, index / sizeX);
+}
+
+void main(void) {
+  v_color = color;
+
+  ivec2 coord = convertIndexToCoord(gl_InstanceID, textureSize(u_positionTexture, 0).x);
+  vec3 instancePosition = texelFetch(u_positionTexture, coord, 0).xyz;
+
+  v_normal = (u_mvpMatrix * vec4(vertexNormal, 0.0)).xyz;
+  gl_Position = u_mvpMatrix * vec4(position + (2.0 * instancePosition - 1.0) * 500.0, 1.0);
 }
 `
 
@@ -460,6 +494,12 @@ void main(void) {
     return createProgram(gl, vertexShader, fragmentShader);
   }
 
+  function createFindNeighborsProgram(gl) {
+    const vertexShader = createShader(gl, FIND_NEIGHGBORS_VERTEX_SHADER_SOURCE, gl.VERTEX_SHADER);
+    const fragmentShader = createShader(gl, TRANSFORM_FEEDBAK_FRAGMENT_SHADER_SOURCE, gl.FRAGMENT_SHADER);
+    return createTransformFeedbackProgram(gl, vertexShader, fragmentShader, ['o_color']);
+  }
+
   function createRenderParticleProgram(gl) {
     const vertexShader = createShader(gl, RENDER_PARTICLE_VERTEX_SHADER_SOURCE, gl.VERTEX_SHADER);
     const fragmentShader = createShader(gl, RENDER_PARTICLE_FRAGMENT_SHADER_SOURCE, gl.FRAGMENT_SHADER);
@@ -558,6 +598,7 @@ void main(void) {
 
   const initializeParticleProgram = createInitializeParticleProgram(gl);
   const updateParticleProgram = createUpdateParticleProgram(gl);
+  const findNeighborsProgram = createFindNeighborsProgram(gl);
   const renderParticleProgram = createRenderParticleProgram(gl);
   const initializeBucketProgram = createInitializeBucketProgram(gl);
   const swapBucketIndexProgram = createSwapBucketIndexProgram(gl);
@@ -567,7 +608,8 @@ void main(void) {
 
   const initializeParticleUniforms = getUniformLocations(gl, initializeParticleProgram, ['u_randomSeed']);
   const updateParticleUniforms = getUniformLocations(gl, updateParticleProgram, ['u_positionTexture', 'u_velocityTexture', 'u_deltaTime']);
-  const renderParticleUniforms = getUniformLocations(gl, renderParticleProgram, ['u_positionTexture', 'u_bucketTexture', 'u_bucketReferrerTexture', 'u_viewRadius', 'u_maxValue', 'u_mvpMatrix']);
+  const findNeighborsUniforms = getUniformLocations(gl, findNeighborsProgram, ['u_positionTexture', 'u_bucketTexture', 'u_bucketReferrerTexture', 'u_viewRadius', 'u_maxValue']);
+  const renderParticleUniforms = getUniformLocations(gl, renderParticleProgram, ['u_positionTexture', 'u_mvpMatrix']);
   const initializeBucketUniforms = getUniformLocations(gl, initializeBucketProgram, ['u_positionTexture', 'u_viewRadius']);
   const swapBucketIndexUniforms = getUniformLocations(gl, swapBucketIndexProgram, ['u_bucketTexture', 'u_size', 'u_blockStep', 'u_subBlockStep']);
   const initializeBucketReferrerUniforms = getUniformLocations(gl, initializeBucketReferrerProgram, ['u_bucketTexture', 'u_viewRadius', 'u_bucketReferrerTextureSize', 'u_particleNumN']);
@@ -646,15 +688,19 @@ void main(void) {
         break;
       }
     }
-  
+
+    const particleIndexVbo = createVbo(gl, new Float32Array(Array.from({length: particleNum}, i => i)));
+    const colorVbo = createVbo(gl, new Float32Array(particleNum * 3), gl.DYNAMIC_COPY);
+
     const particleVao = gl.createVertexArray();
     gl.bindVertexArray(particleVao);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIbo);
-    [vertexPositionVbo, vertexNormalVbo].forEach((vbo, i) => {
+    [vertexPositionVbo, vertexNormalVbo, colorVbo].forEach((vbo, i) => {
       gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
       gl.enableVertexAttribArray(i);
       gl.vertexAttribPointer(i, 3, gl.FLOAT, false, 0, 0);
     });
+    gl.vertexAttribDivisor(2, 1);
     gl.bindVertexArray(null);
   
     let particleFbObjR = createParticleFramebuffer(gl, particleTextureSize);
@@ -675,6 +721,8 @@ void main(void) {
   
     const bucketReferrerFbObj = createBucketReferrerFramebuffer(gl, bucketReferrerTextureSize);
   
+    const transformFeedback = gl.createTransformFeedback();
+
     const initializeParticles = function() {
       gl.bindFramebuffer(gl.FRAMEBUFFER, particleFbObjW.framebuffer);
       gl.viewport(0.0, 0.0, particleTextureSize, particleTextureSize);
@@ -772,6 +820,26 @@ void main(void) {
   
       constructBuckets();
     };
+
+    const findNeighbors = function() {
+      gl.useProgram(findNeighborsProgram);
+      setTextureAsUniform(gl, 0, particleFbObjR.positionTexture, findNeighborsUniforms['u_positionTexture']);
+      setTextureAsUniform(gl, 1, bucketFbObjR.bucketTexture, findNeighborsUniforms['u_bucketTexture']);
+      setTextureAsUniform(gl, 2, bucketReferrerFbObj.bucketReferrerTexture, findNeighborsUniforms['u_bucketReferrerTexture']);
+      gl.uniform1f(findNeighborsUniforms['u_viewRadius'], viewRadius);
+      gl.uniform1f(findNeighborsUniforms['u_maxValue'], data['max value']);
+      gl.bindBuffer(gl.ARRAY_BUFFER, particleIndexVbo);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 1, gl.FLOAT, false, 0, 0);
+      gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, transformFeedback);
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, colorVbo);
+      gl.enable(gl.RASTERIZER_DISCARD);
+      gl.beginTransformFeedback(gl.POINTS);
+      gl.drawArrays(gl.POINTS, 0, particleNum);
+      gl.disable(gl.RASTERIZER_DISCARD);
+      gl.endTransformFeedback();
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+    }
   
   
     initializeParticles();
@@ -794,17 +862,13 @@ void main(void) {
       const mvpMatrix = Matrix4.mul(viewMatrix, projectionMatrix);
 
       updateParticles(deltaTime);
-  
+      findNeighbors();
+
       gl.viewport(0.0, 0.0, canvas.width, canvas.height);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       gl.useProgram(renderParticleProgram);
       setTextureAsUniform(gl, 0, particleFbObjR.positionTexture, renderParticleUniforms['u_positionTexture']);
-      setTextureAsUniform(gl, 1, bucketFbObjR.bucketTexture, renderParticleUniforms['u_bucketTexture']);
-      setTextureAsUniform(gl, 2, bucketReferrerFbObj.bucketReferrerTexture, renderParticleUniforms['u_bucketReferrerTexture']);
-      gl.uniform2f(renderParticleUniforms['u_canvasSize'], canvas.width, canvas.height);
-      gl.uniform1f(renderParticleUniforms['u_viewRadius'], viewRadius);
-      gl.uniform1f(renderParticleUniforms['u_maxValue'], data['max value']);
       gl.uniformMatrix4fv(renderParticleUniforms['u_mvpMatrix'], false, mvpMatrix.elements);
 
       gl.bindVertexArray(particleVao);
