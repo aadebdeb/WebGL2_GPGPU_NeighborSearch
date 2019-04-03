@@ -796,7 +796,7 @@ void main(void) {
       updateParticles(deltaTime);
   
       gl.viewport(0.0, 0.0, canvas.width, canvas.height);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       gl.useProgram(renderParticleProgram);
       setTextureAsUniform(gl, 0, particleFbObjR.positionTexture, renderParticleUniforms['u_positionTexture']);
