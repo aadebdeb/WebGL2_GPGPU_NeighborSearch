@@ -189,7 +189,6 @@ void main(void) {
   sum += findNeighbors(position, bucketPosition011, bucketNum, particleTextureSizeX, bucketReferrerTextureSizeX);
   sum += findNeighbors(position, bucketPosition111, bucketNum, particleTextureSizeX, bucketReferrerTextureSizeX);
 
-
   o_color = getHeatmapColor(sum, u_maxValue);
 }
 `
