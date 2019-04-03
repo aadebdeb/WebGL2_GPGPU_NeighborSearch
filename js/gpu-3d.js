@@ -630,18 +630,18 @@ void main(void) {
 
   const gui = new dat.GUI();
   const data = {
-    'N': 5,
-    'particle num': 2 ** (5 * 2),
+    'N': 7,
+    'particle num': 2 ** (7 * 2),
     'view radius': 0.1,
-    'max value': 300,
+    'max value': 50,
     sphere: {
       'radius': 5.0,
       'theta segment': 16,
       'phi segment': 8
     },
     camera: {
-      'angle': -45.0,
-      'distance': 1000.0,
+      'angle': -25.0,
+      'distance': 1500.0,
       'height': 1000.0
     },
     'reset': () => reset()
@@ -689,7 +689,6 @@ void main(void) {
       }
     }
 
-    const particleIndexVbo = createVbo(gl, new Float32Array(Array.from({length: particleNum}, i => i)));
     const colorVbo = createVbo(gl, new Float32Array(particleNum * 3), gl.DYNAMIC_COPY);
 
     const particleVao = gl.createVertexArray();
@@ -828,9 +827,7 @@ void main(void) {
       setTextureAsUniform(gl, 2, bucketReferrerFbObj.bucketReferrerTexture, findNeighborsUniforms['u_bucketReferrerTexture']);
       gl.uniform1f(findNeighborsUniforms['u_viewRadius'], viewRadius);
       gl.uniform1f(findNeighborsUniforms['u_maxValue'], data['max value']);
-      gl.bindBuffer(gl.ARRAY_BUFFER, particleIndexVbo);
-      gl.enableVertexAttribArray(0);
-      gl.vertexAttribPointer(0, 1, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
       gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, transformFeedback);
       gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, colorVbo);
       gl.enable(gl.RASTERIZER_DISCARD);
@@ -839,9 +836,8 @@ void main(void) {
       gl.disable(gl.RASTERIZER_DISCARD);
       gl.endTransformFeedback();
       gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
-    }
-  
-  
+    };
+
     initializeParticles();
   
     gl.clearColor(0.2, 0.2, 0.2, 1.0);
