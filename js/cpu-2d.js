@@ -142,10 +142,10 @@ void main(void) {
 
   const gui = new dat.GUI();
   const data = {
-    'N': 6,
-    'particle num': 2 ** (6 * 2),
+    'N': 5,
+    'particle num': 2 ** (5 * 2),
     'view radius': 0.1,
-    'max value': 300,
+    'max value': 30,
     'reset': () => reset()
   };
   gui.add(data, 'N', 1, 8).step(1).onChange((v) => {
@@ -206,17 +206,17 @@ void main(void) {
         }
       }
       for (let i = 0; i < particleNum; i++) {
-        const idxX = Math.floor(positions[2 * i] / bucketSize);
-        const idxY = Math.floor(positions[2 * i + 1] / bucketSize);
-        buckets[idxX][idxY].push(i);
+        const bucketX = Math.floor(positions[2 * i] / bucketSize);
+        const bucketY = Math.floor(positions[2 * i + 1] / bucketSize);
+        buckets[bucketX][bucketY].push(i);
       }
 
-      const getNeighbors = function(idx, position, idxX, idxY) {
-        if (idxX < 0 || idxX >= bucketNum || idxY < 0 || idxY >= bucketNum) {
+      const getNeighbors = function(particleIdx, position, bucketX, bucketY) {
+        if (bucketX < 0 || bucketX >= bucketNum || bucketY < 0 || bucketY >= bucketNum) {
           return 0.0;
         }
-        return buckets[idxX][idxY].reduce((value, i) => {
-          if (i !== idx) {
+        return buckets[bucketX][bucketY].reduce((value, i) => {
+          if (i !== particleIdx) {
             const otherPos = new Vector2(positions[2 * i], positions[2 * i + 1]);
             const d = Vector2.dist(position, otherPos);
             if (d < viewRadius) {
@@ -230,16 +230,16 @@ void main(void) {
       for (let i = 0; i < particleNum; i++) {
         const position = new Vector2(positions[2 * i], positions[2 * i + 1]);
 
-        const idxX = Math.floor(position.x / bucketSize);
-        const idxY = Math.floor(position.y / bucketSize);
-        const offsetX = (position.x / bucketSize - idxX) < 0.5 ? -1 : 1;
-        const offsetY = (position.y / bucketSize - idxY) < 0.5 ? -1 : 1;
+        const bucketX = Math.floor(position.x / bucketSize);
+        const bucketY = Math.floor(position.y / bucketSize);
+        const offsetX = (position.x / bucketSize - bucketX) < 0.5 ? -1 : 1;
+        const offsetY = (position.y / bucketSize - bucketY) < 0.5 ? -1 : 1;
 
         let value = 0.0;
-        value += getNeighbors(i, position, idxX, idxY);
-        value += getNeighbors(i, position, idxX + offsetX, idxY);
-        value += getNeighbors(i, position, idxX, idxY + offsetY);
-        value += getNeighbors(i, position, idxX + offsetX, idxY + offsetY);
+        value += getNeighbors(i, position, bucketX, bucketY);
+        value += getNeighbors(i, position, bucketX + offsetX, bucketY);
+        value += getNeighbors(i, position, bucketX, bucketY + offsetY);
+        value += getNeighbors(i, position, bucketX + offsetX, bucketY + offsetY);
 
         values[i] = value;
       }

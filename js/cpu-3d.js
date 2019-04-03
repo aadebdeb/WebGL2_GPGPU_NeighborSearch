@@ -272,18 +272,18 @@ void main(void) {
         }
       }
       for (let i = 0; i < particleNum; i++) {
-        const idxX = Math.floor(positions[3 * i] / bucketSize);
-        const idxY = Math.floor(positions[3 * i + 1] / bucketSize);
-        const idxZ = Math.floor(positions[3 * i + 2] / bucketSize);
-        buckets[idxX][idxY][idxZ].push(i);
+        const bucketX = Math.floor(positions[3 * i] / bucketSize);
+        const bucketY = Math.floor(positions[3 * i + 1] / bucketSize);
+        const bucketZ = Math.floor(positions[3 * i + 2] / bucketSize);
+        buckets[bucketX][bucketY][bucketZ].push(i);
       }
 
-      const getNeighbors = function(idx, position, idxX, idxY, idxZ) {
-        if (idxX < 0 || idxX >= bucketNum || idxY < 0 || idxY >= bucketNum || idxZ < 0 || idxZ >= bucketNum) {
+      const getNeighbors = function(particleIdx, position, bucketX, bucketY, bucketZ) {
+        if (bucketX < 0 || bucketX >= bucketNum || bucketY < 0 || bucketY >= bucketNum || bucketZ < 0 || bucketZ >= bucketNum) {
           return 0.0;
         }
-        return buckets[idxX][idxY][idxZ].reduce((value, i) => {
-          if (i !== idx) {
+        return buckets[bucketX][bucketY][bucketZ].reduce((value, i) => {
+          if (i !== particleIdx) {
             const otherPos = new Vector3(positions[3 * i], positions[3 * i + 1], positions[3 * i + 2]);
             const d = Vector3.dist(position, otherPos);
             if (d < viewRadius) {
@@ -297,22 +297,22 @@ void main(void) {
       for (let i = 0; i < particleNum; i++) {
         const position = new Vector3(positions[3 * i], positions[3 * i + 1], positions[3 * i + 2]);
 
-        const idxX = Math.floor(position.x / bucketSize);
-        const idxY = Math.floor(position.y / bucketSize);
-        const idxZ = Math.floor(position.z / bucketSize);
-        const offsetX = (position.x / bucketSize - idxX) < 0.5 ? -1 : 1;
-        const offsetY = (position.y / bucketSize - idxY) < 0.5 ? -1 : 1;
-        const offsetZ = (position.z / bucketSize - idxZ) < 0.5 ? -1 : 1;
+        const bucketX = Math.floor(position.x / bucketSize);
+        const bucketY = Math.floor(position.y / bucketSize);
+        const bucketZ = Math.floor(position.z / bucketSize);
+        const offsetX = (position.x / bucketSize - bucketX) < 0.5 ? -1 : 1;
+        const offsetY = (position.y / bucketSize - bucketY) < 0.5 ? -1 : 1;
+        const offsetZ = (position.z / bucketSize - bucketZ) < 0.5 ? -1 : 1;
 
         let value = 0.0;
-        value += getNeighbors(i, position, idxX, idxY, idxZ);
-        value += getNeighbors(i, position, idxX + offsetX, idxY, idxZ);
-        value += getNeighbors(i, position, idxX, idxY + offsetY, idxZ);
-        value += getNeighbors(i, position, idxX + offsetX, idxY + offsetY, idxZ);
-        value += getNeighbors(i, position, idxX, idxY, idxZ + offsetZ);
-        value += getNeighbors(i, position, idxX + offsetX, idxY, idxZ + offsetZ);
-        value += getNeighbors(i, position, idxX, idxY + offsetY, idxZ + offsetZ);
-        value += getNeighbors(i, position, idxX + offsetX, idxY + offsetY, idxZ + offsetZ);
+        value += getNeighbors(i, position, bucketX, bucketY, bucketZ);
+        value += getNeighbors(i, position, bucketX + offsetX, bucketY, bucketZ);
+        value += getNeighbors(i, position, bucketX, bucketY + offsetY, bucketZ);
+        value += getNeighbors(i, position, bucketX + offsetX, bucketY + offsetY, bucketZ);
+        value += getNeighbors(i, position, bucketX, bucketY, bucketZ + offsetZ);
+        value += getNeighbors(i, position, bucketX + offsetX, bucketY, bucketZ + offsetZ);
+        value += getNeighbors(i, position, bucketX, bucketY + offsetY, bucketZ + offsetZ);
+        value += getNeighbors(i, position, bucketX + offsetX, bucketY + offsetY, bucketZ + offsetZ);
 
         values[i] = value;
       }
