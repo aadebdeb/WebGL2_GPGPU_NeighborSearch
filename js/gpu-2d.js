@@ -416,11 +416,16 @@ out vec4 o_color;
 uniform usampler2D u_bucketTexture;
 uniform vec2 u_canvasSize;
 uniform uint u_bucketNum;
+uniform uint u_particleNum;
 
 void main(void) {
   uvec2 bucket = texture(u_bucketTexture, gl_FragCoord.xy / u_canvasSize).xy;
-  // o_color = vec4(vec3(float(bucket.x) / float(u_bucketNum)), 1.0);
-  o_color = vec4(vec3(float(bucket.y) / float(16384 - 1)), 1.0);
+
+  // render bucketTexture.x (bucket index) to screen
+  o_color = vec4(vec3(float(bucket.x) / float(u_bucketNum)), 1.0);
+
+  // render bucketTexture.y (particle index) to screen
+  //o_color = vec4(vec3(float(bucket.y) / float(u_particleNum - 1u)), 1.0);
 }
 `
 
@@ -588,7 +593,7 @@ void main(void) {
   const initializeBucketUniforms = getUniformLocations(gl, initializeBucketProgram, ['u_positionTexture', 'u_viewRadius']);
   const swapBucketIndexUniforms = getUniformLocations(gl, swapBucketIndexProgram, ['u_bucketTexture', 'u_size', 'u_blockStep', 'u_subBlockStep']);
   const initializeBucketReferrerUniforms = getUniformLocations(gl, initializeBucketReferrerProgram, ['u_bucketTexture', 'u_viewRadius', 'u_bucketReferrerTextureSize', 'u_particleNumN']);
-  const debugBitonicSortUniforms = getUniformLocations(gl, debugBitonicSortProgram, ['u_bucketTexture', 'u_bucketNum', 'u_canvasSize']);
+  const debugBitonicSortUniforms = getUniformLocations(gl, debugBitonicSortProgram, ['u_bucketTexture', 'u_bucketNum', 'u_canvasSize', 'u_particleNum']);
   const debugBucketReferrerUniforms = getUniformLocations(gl, debugBucketReferrerProgram, ['u_bucketReferrerTexture', 'u_canvasSize', 'u_particleNum'])
 
   const fillScreenVao = createVao(gl,
@@ -816,6 +821,7 @@ void main(void) {
       // gl.useProgram(debugBitonicSortProgram);
       // setTextureAsUniform(gl, 0, bucketFbObjR.bucketTexture, debugBitonicSortUniforms['u_bucketTexture']);
       // gl.uniform1ui(debugBitonicSortUniforms['u_bucketNum'], bucketSize * bucketSize);
+      // gl.uniform1ui(debugBitonicSortUniforms['u_particleNum'], particleNum);
       // gl.uniform2f(debugBitonicSortUniforms['u_canvasSize'], canvas.width, canvas.height);
       // gl.bindVertexArray(fillScreenVao);
       // gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
