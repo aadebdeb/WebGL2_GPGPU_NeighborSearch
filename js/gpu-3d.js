@@ -870,8 +870,7 @@ void main(void) {
       gl.bindVertexArray(particleVao);
       gl.drawElementsInstanced(gl.TRIANGLES, sphere.indices.length, gl.UNSIGNED_SHORT, 0, particleNum);
       gl.bindVertexArray(null);
-  
-  
+
       // code to render bucketTexture for debug
       // gl.useProgram(debugBitonicSortProgram);
       // setTextureAsUniform(gl, 0, bucketFbObjR.bucketTexture, debugBitonicSortUniforms['u_bucketTexture']);

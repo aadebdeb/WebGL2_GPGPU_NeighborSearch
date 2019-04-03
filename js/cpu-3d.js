@@ -61,18 +61,13 @@ void main(void) {
 }
 `
 
-  const RENDER_PARTICLE_VERTEX_SHADER_SOURCE =
+const COMPUTE_COLOR_VERTEX_SHADER_SOURCE =
 `#version 300 es
 
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec3 normal;
-layout (location = 2) in float value;
-layout (location = 3) in vec3 instancePosition;
+layout (location = 0) in float value;
 
-out vec3 v_color;
-out vec3 v_normal;
+out vec3 o_color;
 
-uniform mat4 u_mvpMatrix;
 uniform float u_maxValue;
 
 vec3[7] HEAT_MAP_COLORS = vec3[7](
@@ -92,7 +87,25 @@ vec3 getHeatmapColor(float value, float maxValue) {
 }
 
 void main(void) {
-  v_color = getHeatmapColor(value, u_maxValue);
+  o_color = getHeatmapColor(value, u_maxValue);
+}
+`
+
+  const RENDER_PARTICLE_VERTEX_SHADER_SOURCE =
+`#version 300 es
+
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec3 color;
+layout (location = 3) in vec3 instancePosition;
+
+out vec3 v_color;
+out vec3 v_normal;
+
+uniform mat4 u_mvpMatrix;
+
+void main(void) {
+  v_color = color;
   v_normal = (u_mvpMatrix * vec4(normal, 0.0)).xyz;
   vec3 pos = position + (2.0 * instancePosition - 1.0) * 500.0;
   gl_Position = u_mvpMatrix * vec4(pos, 1.0);
@@ -124,6 +137,12 @@ void main(void) {
     return createTransformFeedbackProgram(gl, vertexShader, fragmentShader, ['o_position', 'o_velocity']);
   }
 
+  function createComputeColorProgram(gl) {
+    const vertexShader = createShader(gl, COMPUTE_COLOR_VERTEX_SHADER_SOURCE, gl.VERTEX_SHADER);
+    const fragmentShader = createShader(gl, TRANSFORM_FEEDBAK_FRAGMENT_SHADER_SOURCE, gl.FRAGMENT_SHADER);
+    return createTransformFeedbackProgram(gl, vertexShader, fragmentShader, ['o_color']);
+  }
+
   function createRenderParticleProgram(gl) {
     const vertexShader = createShader(gl, RENDER_PARTICLE_VERTEX_SHADER_SOURCE, gl.VERTEX_SHADER);
     const fragmentShader = createShader(gl, RENDER_PARTICLE_FRAGMENT_SHADER_SOURCE, gl.FRAGMENT_SHADER);
@@ -144,10 +163,12 @@ void main(void) {
   gl.enable(gl.CULL_FACE);
 
   const updateParticleProgram = createUpdateParticleProgram(gl);
+  const computeColorProgram = createComputeColorProgram(gl);
   const renderParticleProgram = createRenderParticleProgram(gl);
 
   const updateParticleUniforms = getUniformLocations(gl, updateParticleProgram, ['u_deltaTime']);
-  const renderParticleUniforms = getUniformLocations(gl, renderParticleProgram, ['u_mvpMatrix', 'u_maxValue']);
+  const computeColorUniforms = getUniformLocations(gl, computeColorProgram, ['u_maxValue']);
+  const renderParticleUniforms = getUniformLocations(gl, renderParticleProgram, ['u_mvpMatrix']);
 
   const stats = new Stats();
   document.body.appendChild(stats.dom);
@@ -213,7 +234,9 @@ void main(void) {
     let velocityVboR = createVbo(gl, velocities, gl.DYNAMIC_COPY);
     let positionVboW = createVbo(gl, new Float32Array(particleNum * 3), gl.DYNAMIC_COPY);
     let velocityVboW = createVbo(gl, new Float32Array(particleNum * 3), gl.DYNAMIC_COPY);
-    const valueVbo = createVbo(gl, values);
+    const valueVbo = createVbo(gl, values, gl.DYNAMIC_DRAW);
+    let colorVboR = createVbo(gl, new Float32Array(particleNum * 3), gl.DYNAMIC_COPY);
+    let colorVboW = createVbo(gl, new Float32Array(particleNum * 3), gl.DYNAMIC_COPY);
     const swapParticleVbos = function() {
       const tmpP = positionVboR;
       const tmpV = velocityVboR;
@@ -221,11 +244,17 @@ void main(void) {
       velocityVboR = velocityVboW;
       positionVboW = tmpP;
       velocityVboW = tmpV;
+    };
+    const swapColorVbo = function() {
+      const tmp = colorVboR;
+      colorVboR = colorVboW;
+      colorVboW = tmp;
     }
 
     const viewRadius = data['view radius'];
 
     const transformFeedback = gl.createTransformFeedback();
+    const transformFeedback2 = gl.createTransformFeedback();
 
     const computeValues = function() {
       gl.bindBuffer(gl.ARRAY_BUFFER, positionVboR);
@@ -292,6 +321,25 @@ void main(void) {
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, values);
     }
 
+    const computeColors = function() {
+      gl.useProgram(computeColorProgram);
+      gl.uniform1f(computeColorUniforms['u_maxValue'], data['max value']);
+      gl.bindBuffer(gl.ARRAY_BUFFER, valueVbo);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 1, gl.FLOAT, false, 0, 0);
+      gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, transformFeedback2);
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, colorVboW);
+      gl.enable(gl.RASTERIZER_DISCARD);
+      gl.beginTransformFeedback(gl.POINTS);
+      gl.drawArrays(gl.POINTS, 0, particleNum);
+      gl.disable(gl.RASTERIZER_DISCARD);
+      gl.endTransformFeedback();
+      gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+
+      swapColorVbo();
+    };
+
     const updateParticles = function(deltaTime) {
       gl.useProgram(updateParticleProgram);
       gl.uniform1f(updateParticleUniforms['u_deltaTime'], deltaTime);
@@ -308,11 +356,13 @@ void main(void) {
       gl.drawArrays(gl.POINTS, 0, particleNum);
       gl.disable(gl.RASTERIZER_DISCARD);
       gl.endTransformFeedback();
+      gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
       gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
       gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 1, null);
       swapParticleVbos();
 
       computeValues();
+      computeColors();
     };
 
     gl.clearColor(0.2, 0.2, 0.2, 1.0);
@@ -342,7 +392,7 @@ void main(void) {
       gl.uniformMatrix4fv(renderParticleUniforms['u_mvpMatrix'], false, mvpMatrix.elements);
   
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIbo);
-      [[vertexPositionVbo, 3], [vertexNormalVbo, 3], [valueVbo, 1], [positionVboR, 3]].forEach((obj, i) => {
+      [[vertexPositionVbo, 3], [vertexNormalVbo, 3], [colorVboR, 3], [positionVboR, 3]].forEach((obj, i) => {
         gl.bindBuffer(gl.ARRAY_BUFFER, obj[0]);
         gl.enableVertexAttribArray(i);
         gl.vertexAttribPointer(i, obj[1], gl.FLOAT, false, 0, 0);
