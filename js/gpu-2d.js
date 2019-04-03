@@ -105,7 +105,7 @@ float findNeighbors(vec2 position, ivec2 bucketPosition, ivec2 bucketNum, int pa
   int bucketIndex = bucketPosition.x + bucketNum.x * bucketPosition.y;
   ivec2 coord = convertIndexToCoord(bucketIndex, bucketReferrerTextureSizeX);
 
-  ivec2 bucketReferrer = ivec2(texelFetch(u_bucketReferrerTexture, coord, 0).xy);
+  ivec2 bucketReferrer = texelFetch(u_bucketReferrerTexture, coord, 0).xy;
 
   if (bucketReferrer.x == -1 || bucketReferrer.y == -1) {
     return 0.0;

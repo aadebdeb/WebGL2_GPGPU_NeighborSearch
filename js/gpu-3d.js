@@ -117,7 +117,7 @@ float findNeighbors(vec3 position, ivec3 bucketPosition, ivec3 bucketNum, int pa
   int bucketIndex = bucketPosition.x + bucketNum.x * bucketPosition.y + (bucketNum.x * bucketNum.y) * bucketPosition.z;
   ivec2 coord = convertIndexToCoord(bucketIndex, bucketReferrerTextureSizeX);
 
-  ivec2 bucketReferrer = ivec2(texelFetch(u_bucketReferrerTexture, coord, 0).xy);
+  ivec2 bucketReferrer = texelFetch(u_bucketReferrerTexture, coord, 0).xy;
 
   if (bucketReferrer.x == -1 || bucketReferrer.y == -1) {
     return 0.0;
@@ -636,8 +636,8 @@ void main(void) {
     'max value': 50,
     sphere: {
       'radius': 5.0,
-      'theta segment': 16,
-      'phi segment': 8
+      'theta segment': 8,
+      'phi segment': 16
     },
     camera: {
       'angle': -25.0,
@@ -688,19 +688,6 @@ void main(void) {
         break;
       }
     }
-
-    const colorVbo = createVbo(gl, new Float32Array(particleNum * 3), gl.DYNAMIC_COPY);
-
-    const particleVao = gl.createVertexArray();
-    gl.bindVertexArray(particleVao);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIbo);
-    [vertexPositionVbo, vertexNormalVbo, colorVbo].forEach((vbo, i) => {
-      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-      gl.enableVertexAttribArray(i);
-      gl.vertexAttribPointer(i, 3, gl.FLOAT, false, 0, 0);
-    });
-    gl.vertexAttribDivisor(2, 1);
-    gl.bindVertexArray(null);
   
     let particleFbObjR = createParticleFramebuffer(gl, particleTextureSize);
     let particleFbObjW = createParticleFramebuffer(gl, particleTextureSize);
@@ -709,7 +696,6 @@ void main(void) {
       particleFbObjR = particleFbObjW;
       particleFbObjW = tmp;
     };
-  
     let bucketFbObjR = createBucketFramebuffer(gl, particleTextureSize);
     let bucketFbObjW = createBucketFramebuffer(gl, particleTextureSize);
     const swapBucketFbObj = function() {
@@ -717,9 +703,15 @@ void main(void) {
       bucketFbObjR = bucketFbObjW;
       bucketFbObjW = tmp;
     }
-  
     const bucketReferrerFbObj = createBucketReferrerFramebuffer(gl, bucketReferrerTextureSize);
-  
+    let colorVboR = createVbo(gl, new Float32Array(particleNum * 3), gl.DYNAMIC_COPY);
+    let colorVboW = createVbo(gl, new Float32Array(particleNum * 3), gl.DYNAMIC_COPY);
+    const swapColorVbo = function() {
+      const tmp = colorVboR;
+      colorVboR = colorVboW;
+      colorVboW = tmp;
+    }
+
     const transformFeedback = gl.createTransformFeedback();
 
     const initializeParticles = function() {
@@ -827,15 +819,15 @@ void main(void) {
       setTextureAsUniform(gl, 2, bucketReferrerFbObj.bucketReferrerTexture, findNeighborsUniforms['u_bucketReferrerTexture']);
       gl.uniform1f(findNeighborsUniforms['u_viewRadius'], viewRadius);
       gl.uniform1f(findNeighborsUniforms['u_maxValue'], data['max value']);
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
       gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, transformFeedback);
-      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, colorVbo);
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, colorVboW);
       gl.enable(gl.RASTERIZER_DISCARD);
       gl.beginTransformFeedback(gl.POINTS);
       gl.drawArrays(gl.POINTS, 0, particleNum);
       gl.disable(gl.RASTERIZER_DISCARD);
       gl.endTransformFeedback();
       gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+      swapColorVbo();
     };
 
     initializeParticles();
@@ -867,9 +859,14 @@ void main(void) {
       setTextureAsUniform(gl, 0, particleFbObjR.positionTexture, renderParticleUniforms['u_positionTexture']);
       gl.uniformMatrix4fv(renderParticleUniforms['u_mvpMatrix'], false, mvpMatrix.elements);
 
-      gl.bindVertexArray(particleVao);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIbo);
+      [vertexPositionVbo, vertexNormalVbo, colorVboR].forEach((vbo, i) => {
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        gl.enableVertexAttribArray(i);
+        gl.vertexAttribPointer(i, 3, gl.FLOAT, false, 0, 0);
+      });
+      gl.vertexAttribDivisor(2, 1);
       gl.drawElementsInstanced(gl.TRIANGLES, sphere.indices.length, gl.UNSIGNED_SHORT, 0, particleNum);
-      gl.bindVertexArray(null);
 
       // code to render bucketTexture for debug
       // gl.useProgram(debugBitonicSortProgram);

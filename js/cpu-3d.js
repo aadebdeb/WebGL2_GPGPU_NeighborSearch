@@ -178,15 +178,15 @@ void main(void) {
     'N': 5,
     'particle num': 2 ** (5 * 2),
     'view radius': 0.1,
-    'max value': 300,
+    'max value': 5,
     sphere: {
       'radius': 5.0,
-      'theta segment': 16,
-      'phi segment': 8
+      'theta segment': 8,
+      'phi segment': 15
     },
     camera: {
-      'angle': -45.0,
-      'distance': 1000.0,
+      'angle': -25.0,
+      'distance': 1500.0,
       'height': 1000.0
     },
     'reset': () => reset()
@@ -254,7 +254,6 @@ void main(void) {
     const viewRadius = data['view radius'];
 
     const transformFeedback = gl.createTransformFeedback();
-    const transformFeedback2 = gl.createTransformFeedback();
 
     const computeValues = function() {
       gl.bindBuffer(gl.ARRAY_BUFFER, positionVboR);
@@ -310,6 +309,7 @@ void main(void) {
         value += getNeighbors(i, position, idxX + offsetX, idxY, idxZ);
         value += getNeighbors(i, position, idxX, idxY + offsetY, idxZ);
         value += getNeighbors(i, position, idxX + offsetX, idxY + offsetY, idxZ);
+        value += getNeighbors(i, position, idxX, idxY, idxZ + offsetZ);
         value += getNeighbors(i, position, idxX + offsetX, idxY, idxZ + offsetZ);
         value += getNeighbors(i, position, idxX, idxY + offsetY, idxZ + offsetZ);
         value += getNeighbors(i, position, idxX + offsetX, idxY + offsetY, idxZ + offsetZ);
@@ -327,7 +327,7 @@ void main(void) {
       gl.bindBuffer(gl.ARRAY_BUFFER, valueVbo);
       gl.enableVertexAttribArray(0);
       gl.vertexAttribPointer(0, 1, gl.FLOAT, false, 0, 0);
-      gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, transformFeedback2);
+      gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, transformFeedback);
       gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, colorVboW);
       gl.enable(gl.RASTERIZER_DISCARD);
       gl.beginTransformFeedback(gl.POINTS);
